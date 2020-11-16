@@ -79,6 +79,67 @@ static BIG_POWERS_10: [u64; 10] = [
     10_000_000_000_000_000_000,
 ];
 
+static DECIMAL_E: [Decimal; 29] = [
+    //10^0
+    Decimal::from_parts(1, 0, 0, false, 0),
+    //10^1
+    Decimal::from_parts(10, 0, 0, false, 0),
+    //10^2
+    Decimal::from_parts(100, 0, 0, false, 0),
+    //10^3
+    Decimal::from_parts(1000, 0, 0, false, 0),
+    //10^4
+    Decimal::from_parts(10000, 0, 0, false, 0),
+    //10^5
+    Decimal::from_parts(100000, 0, 0, false, 0),
+    //10^6
+    Decimal::from_parts(1000000, 0, 0, false, 0),
+    //10^7
+    Decimal::from_parts(10000000, 0, 0, false, 0),
+    //10^8
+    Decimal::from_parts(100000000, 0, 0, false, 0),
+    //10^9
+    Decimal::from_parts(1000000000, 0, 0, false, 0),
+    //10^10
+    Decimal::from_parts(1410065408, 2, 0, false, 0),
+    //10^11
+    Decimal::from_parts(1215752192, 23, 0, false, 0),
+    //10^12
+    Decimal::from_parts(3567587328, 232, 0, false, 0),
+    //10^13
+    Decimal::from_parts(1316134912, 2328, 0, false, 0),
+    //10^14
+    Decimal::from_parts(276447232, 23283, 0, false, 0),
+    //10^15
+    Decimal::from_parts(2764472320, 232830, 0, false, 0),
+    //10^16
+    Decimal::from_parts(1874919424, 2328306, 0, false, 0),
+    //10^17
+    Decimal::from_parts(1569325056, 23283064, 0, false, 0),
+    //10^18
+    Decimal::from_parts(2808348672, 232830643, 0, false, 0),
+    //10^19
+    Decimal::from_parts(2313682944, 2328306436, 0, false, 0),
+    //10^20
+    Decimal::from_parts(1661992960, 1808227885, 5, false, 0),
+    //10^21
+    Decimal::from_parts(3735027712, 902409669, 54, false, 0),
+    //10^22
+    Decimal::from_parts(2990538752, 434162106, 542, false, 0),
+    //10^23
+    Decimal::from_parts(4135583744, 46653770, 5421, false, 0),
+    //10^24
+    Decimal::from_parts(2701131776, 466537709, 54210, false, 0),
+    //10^25
+    Decimal::from_parts(1241513984, 370409800, 542101, false, 0),
+    //10^26
+    Decimal::from_parts(3825205248, 3704098002, 5421010, false, 0),
+    //10^27
+    Decimal::from_parts(3892314112, 2681241660, 54210108, false, 0),
+    //10^28
+    Decimal::from_parts(268435456, 1042612833, 542101086, false, 0),
+];
+
 /// `UnpackedDecimal` contains unpacked representation of `Decimal` where each component
 /// of decimal-format stored in it's own field
 #[derive(Clone, Copy, Debug)]
@@ -95,7 +156,11 @@ pub struct UnpackedDecimal {
 /// where m is an integer such that -2<sup>96</sup> < m < 2<sup>96</sup>, and e is an integer
 /// between 0 and 28 inclusive.
 #[derive(Clone, Copy)]
-#[cfg_attr(feature = "diesel", derive(FromSqlRow, AsExpression), sql_type = "Numeric")]
+#[cfg_attr(
+    feature = "diesel",
+    derive(FromSqlRow, AsExpression),
+    sql_type = "Numeric"
+)]
 pub struct Decimal {
     // Bits 0-15: unused
     // Bits 16-23: Contains "e", a value between 0-28 that indicates the scale
@@ -270,9 +335,13 @@ impl Decimal {
             let exp: u32 = exp.parse().map_err(move |_| err)?;
             if exp <= current_scale {
                 ret.set_scale(current_scale - exp)?;
+            } else if exp < 29 {
+                ret = ret
+                    .checked_mul(&DECIMAL_E[exp as usize])
+                    .ok_or_else(|| Error::new("Failed to parse"))?
+                    .normalize();
             } else {
-                ret *= Decimal::from_i64(10_i64.pow(exp)).unwrap();
-                ret = ret.normalize();
+                return Err(Error::new("Exponent cannot be higher than 28"));
             }
         }
         Ok(ret)
@@ -451,10 +520,22 @@ impl Decimal {
     /// * Bytes 13-16: high portion of `m`
     pub const fn deserialize(bytes: [u8; 16]) -> Decimal {
         Decimal {
-            flags: (bytes[0] as u32) | (bytes[1] as u32) << 8 | (bytes[2] as u32) << 16 | (bytes[3] as u32) << 24,
-            lo: (bytes[4] as u32) | (bytes[5] as u32) << 8 | (bytes[6] as u32) << 16 | (bytes[7] as u32) << 24,
-            mid: (bytes[8] as u32) | (bytes[9] as u32) << 8 | (bytes[10] as u32) << 16 | (bytes[11] as u32) << 24,
-            hi: (bytes[12] as u32) | (bytes[13] as u32) << 8 | (bytes[14] as u32) << 16 | (bytes[15] as u32) << 24,
+            flags: (bytes[0] as u32)
+                | (bytes[1] as u32) << 8
+                | (bytes[2] as u32) << 16
+                | (bytes[3] as u32) << 24,
+            lo: (bytes[4] as u32)
+                | (bytes[5] as u32) << 8
+                | (bytes[6] as u32) << 16
+                | (bytes[7] as u32) << 24,
+            mid: (bytes[8] as u32)
+                | (bytes[9] as u32) << 8
+                | (bytes[10] as u32) << 16
+                | (bytes[11] as u32) << 24,
+            hi: (bytes[12] as u32)
+                | (bytes[13] as u32) << 8
+                | (bytes[14] as u32) << 16
+                | (bytes[15] as u32) << 24,
         }
     }
 
@@ -936,7 +1017,12 @@ impl Decimal {
         [self.lo, self.mid, self.hi, 0]
     }
 
-    fn base2_to_decimal(bits: &mut [u32; 3], exponent2: i32, positive: bool, is64: bool) -> Option<Self> {
+    fn base2_to_decimal(
+        bits: &mut [u32; 3],
+        exponent2: i32,
+        positive: bool,
+        is64: bool,
+    ) -> Option<Self> {
         // 2^exponent2 = (10^exponent2)/(5^exponent2)
         //             = (5^-exponent2)*(10^exponent2)
         let mut exponent5 = -exponent2;
@@ -1042,7 +1128,9 @@ impl Decimal {
         } else {
             // Guaranteed to about 7 dp
             while exponent10 < 0
-                && (bits[2] != 0 || bits[1] != 0 || (bits[2] == 0 && bits[1] == 0 && (bits[0] & 0xFF00_0000) != 0))
+                && (bits[2] != 0
+                    || bits[1] != 0
+                    || (bits[2] == 0 && bits[1] == 0 && (bits[0] & 0xFF00_0000) != 0))
             {
                 let rem10 = div_by_u32(bits, 10);
                 exponent10 += 1;
@@ -1165,7 +1253,7 @@ impl Decimal {
 
     /// Checked multiplication. Computes `self * other`, returning `None` if overflow occurred.
     #[inline]
-    pub fn checked_mul(self, other: Decimal) -> Option<Decimal> {
+    pub fn checked_mul(self, other: &Decimal) -> Option<Decimal> {
         // Early exit if either is zero
         if self.is_zero() || other.is_zero() {
             return Some(Decimal::zero());
@@ -1481,7 +1569,12 @@ impl Decimal {
         let mut quotient_scale = initial_scale;
         let mut divisor = [other.lo, other.mid, other.hi];
         let mut divisor_scale = other.scale();
-        rescale_to_maximum_scale(&mut quotient, &mut quotient_scale, &mut divisor, &mut divisor_scale);
+        rescale_to_maximum_scale(
+            &mut quotient,
+            &mut quotient_scale,
+            &mut divisor,
+            &mut divisor_scale,
+        );
 
         // Working is the remainder + the quotient
         // We use an aligned array since we'll be using it a lot.
@@ -1539,7 +1632,12 @@ const fn flags(neg: bool, scale: u32) -> u32 {
 /// will try to reduce the accuracy of the other argument.
 /// e.g. with 1.23 and 2.345 it'll rescale the first arg to 1.230
 #[inline(always)]
-fn rescale_to_maximum_scale(left: &mut [u32; 3], left_scale: &mut u32, right: &mut [u32; 3], right_scale: &mut u32) {
+fn rescale_to_maximum_scale(
+    left: &mut [u32; 3],
+    left_scale: &mut u32,
+    right: &mut [u32; 3],
+    right_scale: &mut u32,
+) {
     if left_scale == right_scale {
         // Nothing to do
         return;
@@ -1669,7 +1767,10 @@ fn add_internal(value: &mut [u32], by: &[u32]) -> u32 {
             carry += u64::from(by[vl]);
         }
     } else {
-        panic!("Internal error: add using incompatible length arrays. {} <- {}", vl, bl);
+        panic!(
+            "Internal error: add using incompatible length arrays. {} <- {}",
+            vl, bl
+        );
     }
     carry as u32
 }
@@ -1770,7 +1871,12 @@ fn add_with_scale_internal(
     // (ultimately losing significant digits)
     if *quotient_scale != *working_scale {
         // TODO: Remove necessity for temp (without performance impact)
-        fn div_by_10_lossy(target: &mut [u32], temp: &mut [u32], scale: &mut i32, target_scale: i32) {
+        fn div_by_10_lossy(
+            target: &mut [u32],
+            temp: &mut [u32],
+            scale: &mut i32,
+            target_scale: i32,
+        ) {
             temp.copy_from_slice(target);
             // divide by 10 until target scale is reached
             while *scale > target_scale {
@@ -2370,7 +2476,11 @@ impl Num for Decimal {
             };
 
             // Round at midpoint
-            let midpoint = if radix & 0x1 == 1 { radix / 2 } else { radix + 1 / 2 };
+            let midpoint = if radix & 0x1 == 1 {
+                radix / 2
+            } else {
+                radix + 1 / 2
+            };
             if digit >= midpoint {
                 let mut index = coeff.len() - 1;
                 loop {
@@ -2843,7 +2953,7 @@ impl<'a, 'b> Mul<&'b Decimal> for &'a Decimal {
 
     #[inline]
     fn mul(self, other: &Decimal) -> Decimal {
-        match self.checked_mul(*other) {
+        match self.checked_mul(other) {
             Some(prod) => prod,
             None => panic!("Multiplication overflowed"),
         }
@@ -3033,7 +3143,12 @@ impl Ord for Decimal {
         // Rescale and compare
         let mut left_raw = [left.lo, left.mid, left.hi];
         let mut right_raw = [right.lo, right.mid, right.hi];
-        rescale_to_maximum_scale(&mut left_raw, &mut left_scale, &mut right_raw, &mut right_scale);
+        rescale_to_maximum_scale(
+            &mut left_raw,
+            &mut left_scale,
+            &mut right_raw,
+            &mut right_scale,
+        );
         cmp_internal(&left_raw, &right_raw)
     }
 }
@@ -3146,7 +3261,11 @@ mod test {
             ("1", 5, "1.00000"),
             ("1", 10, "1.0000000000"),
             ("1", 20, "1.00000000000000000000"),
-            ("0.6386554621848739495798319328", 27, "0.638655462184873949579831933"),
+            (
+                "0.6386554621848739495798319328",
+                27,
+                "0.638655462184873949579831933",
+            ),
             (
                 "843.65000000",                  // Scale 8
                 25,                              // 25
