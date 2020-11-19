@@ -1164,7 +1164,7 @@ impl Decimal {
 
     /// Checked addition. Computes `self + other`, returning `None` if overflow occurred.
     #[inline(always)]
-    pub fn checked_add(self, other: Decimal) -> Option<Decimal> {
+    pub fn checked_add(self, other: &Decimal) -> Option<Decimal> {
         // Convert to the same scale
         let mut my = [self.lo, self.mid, self.hi];
         let mut my_scale = self.scale();
@@ -1241,14 +1241,14 @@ impl Decimal {
 
     /// Checked subtraction. Computes `self - other`, returning `None` if overflow occurred.
     #[inline(always)]
-    pub fn checked_sub(self, other: Decimal) -> Option<Decimal> {
+    pub fn checked_sub(self, other: &Decimal) -> Option<Decimal> {
         let negated_other = Decimal {
             lo: other.lo,
             mid: other.mid,
             hi: other.hi,
             flags: other.flags ^ SIGN_MASK,
         };
-        self.checked_add(negated_other)
+        self.checked_add(&negated_other)
     }
 
     /// Checked multiplication. Computes `self * other`, returning `None` if overflow occurred.
@@ -1426,7 +1426,7 @@ impl Decimal {
 
     /// Checked division. Computes `self / other`, returning `None` if `other == 0.0` or the
     /// division results in overflow.
-    pub fn checked_div(self, other: Decimal) -> Option<Decimal> {
+    pub fn checked_div(self, other: &Decimal) -> Option<Decimal> {
         match self.div_impl(other) {
             DivResult::Ok(quot) => Some(quot),
             DivResult::Overflow => None,
@@ -1434,7 +1434,7 @@ impl Decimal {
         }
     }
 
-    fn div_impl(self, other: Decimal) -> DivResult {
+    fn div_impl(self, other: &Decimal) -> DivResult {
         if other.is_zero() {
             return DivResult::DivByZero;
         }
@@ -2869,7 +2869,7 @@ impl<'a, 'b> Add<&'b Decimal> for &'a Decimal {
 
     #[inline(always)]
     fn add(self, other: &Decimal) -> Decimal {
-        match self.checked_add(*other) {
+        match self.checked_add(other) {
             Some(sum) => sum,
             None => panic!("Addition overflowed"),
         }
@@ -2911,7 +2911,7 @@ impl<'a, 'b> Sub<&'b Decimal> for &'a Decimal {
 
     #[inline(always)]
     fn sub(self, other: &Decimal) -> Decimal {
-        match self.checked_sub(*other) {
+        match self.checked_sub(other) {
             Some(diff) => diff,
             None => panic!("Subtraction overflowed"),
         }
@@ -2994,7 +2994,7 @@ impl<'a, 'b> Div<&'b Decimal> for &'a Decimal {
     type Output = Decimal;
 
     fn div(self, other: &Decimal) -> Decimal {
-        match self.div_impl(*other) {
+        match self.div_impl(other) {
             DivResult::Ok(quot) => quot,
             DivResult::Overflow => panic!("Division overflowed"),
             DivResult::DivByZero => panic!("Division by zero"),
