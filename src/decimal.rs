@@ -39,16 +39,16 @@ static ONE_INTERNAL_REPR: [u32; 3] = [1, 0, 0];
 
 const MIN: Decimal = Decimal {
     flags: 2_147_483_648,
-    lo: 4_294_967_295,
-    mid: 4_294_967_295,
-    hi: 4_294_967_295,
+    lo:    4_294_967_295,
+    mid:   4_294_967_295,
+    hi:    4_294_967_295,
 };
 
 const MAX: Decimal = Decimal {
     flags: 0,
-    lo: 4_294_967_295,
-    mid: 4_294_967_295,
-    hi: 4_294_967_295,
+    lo:    4_294_967_295,
+    mid:   4_294_967_295,
+    hi:    4_294_967_295,
 };
 
 // Fast access for 10^n where n is 0-9
@@ -145,10 +145,10 @@ static DECIMAL_E: [Decimal; 29] = [
 #[derive(Clone, Copy, Debug)]
 pub struct UnpackedDecimal {
     pub is_negative: bool,
-    pub scale: u32,
-    pub hi: u32,
-    pub mid: u32,
-    pub lo: u32,
+    pub scale:       u32,
+    pub hi:          u32,
+    pub mid:         u32,
+    pub lo:          u32,
 }
 
 /// `Decimal` represents a 128 bit representation of a fixed-precision decimal number.
@@ -156,11 +156,7 @@ pub struct UnpackedDecimal {
 /// where m is an integer such that -2<sup>96</sup> < m < 2<sup>96</sup>, and e is an integer
 /// between 0 and 28 inclusive.
 #[derive(Clone, Copy)]
-#[cfg_attr(
-    feature = "diesel",
-    derive(FromSqlRow, AsExpression),
-    sql_type = "Numeric"
-)]
+#[cfg_attr(feature = "diesel", derive(FromSqlRow, AsExpression), sql_type = "Numeric")]
 pub struct Decimal {
     // Bits 0-15: unused
     // Bits 16-23: Contains "e", a value between 0-28 that indicates the scale
@@ -169,9 +165,9 @@ pub struct Decimal {
     flags: u32,
     // The lo, mid, hi, and flags fields contain the representation of the
     // Decimal value as a 96-bit integer.
-    hi: u32,
-    lo: u32,
-    mid: u32,
+    hi:    u32,
+    lo:    u32,
+    mid:   u32,
 }
 
 /// `RoundingStrategy` represents the different strategies that can be used by
@@ -212,19 +208,16 @@ impl Decimal {
     /// ```
     pub fn new(num: i64, scale: u32) -> Decimal {
         if scale > MAX_PRECISION {
-            panic!(
-                "Scale exceeds the maximum precision allowed: {} > {}",
-                scale, MAX_PRECISION
-            );
+            panic!("Scale exceeds the maximum precision allowed: {} > {}", scale, MAX_PRECISION);
         }
         let flags: u32 = scale << SCALE_SHIFT;
         if num < 0 {
             let pos_num = num.wrapping_neg() as u64;
             return Decimal {
                 flags: flags | SIGN_MASK,
-                hi: 0,
-                lo: (pos_num & U32_MASK) as u32,
-                mid: ((pos_num >> 32) & U32_MASK) as u32,
+                hi:    0,
+                lo:    (pos_num & U32_MASK) as u32,
+                mid:   ((pos_num >> 32) & U32_MASK) as u32,
             };
         }
         Decimal {
@@ -252,10 +245,7 @@ impl Decimal {
     /// ```
     pub fn from_i128_with_scale(num: i128, scale: u32) -> Decimal {
         if scale > MAX_PRECISION {
-            panic!(
-                "Scale exceeds the maximum precision allowed: {} > {}",
-                scale, MAX_PRECISION
-            );
+            panic!("Scale exceeds the maximum precision allowed: {} > {}", scale, MAX_PRECISION);
         }
         let mut neg = false;
         let mut wrapped = num;
@@ -520,22 +510,10 @@ impl Decimal {
     /// * Bytes 13-16: high portion of `m`
     pub const fn deserialize(bytes: [u8; 16]) -> Decimal {
         Decimal {
-            flags: (bytes[0] as u32)
-                | (bytes[1] as u32) << 8
-                | (bytes[2] as u32) << 16
-                | (bytes[3] as u32) << 24,
-            lo: (bytes[4] as u32)
-                | (bytes[5] as u32) << 8
-                | (bytes[6] as u32) << 16
-                | (bytes[7] as u32) << 24,
-            mid: (bytes[8] as u32)
-                | (bytes[9] as u32) << 8
-                | (bytes[10] as u32) << 16
-                | (bytes[11] as u32) << 24,
-            hi: (bytes[12] as u32)
-                | (bytes[13] as u32) << 8
-                | (bytes[14] as u32) << 16
-                | (bytes[15] as u32) << 24,
+            flags: (bytes[0] as u32) | (bytes[1] as u32) << 8 | (bytes[2] as u32) << 16 | (bytes[3] as u32) << 24,
+            lo:    (bytes[4] as u32) | (bytes[5] as u32) << 8 | (bytes[6] as u32) << 16 | (bytes[7] as u32) << 24,
+            mid:   (bytes[8] as u32) | (bytes[9] as u32) << 8 | (bytes[10] as u32) << 16 | (bytes[11] as u32) << 24,
+            hi:    (bytes[12] as u32) | (bytes[13] as u32) << 8 | (bytes[14] as u32) << 16 | (bytes[15] as u32) << 24,
         }
     }
 
@@ -605,9 +583,9 @@ impl Decimal {
             }
         }
         Decimal {
-            lo: working[0],
-            mid: working[1],
-            hi: working[2],
+            lo:    working[0],
+            mid:   working[1],
+            hi:    working[2],
             flags: flags(self.is_sign_negative(), 0),
         }
     }
@@ -766,9 +744,9 @@ impl Decimal {
             result.copy_from_slice(&working);
         }
         Decimal {
-            lo: result[0],
-            mid: result[1],
-            hi: result[2],
+            lo:    result[0],
+            mid:   result[1],
+            hi:    result[2],
             flags: flags(self.is_sign_negative(), scale),
         }
     }
@@ -812,9 +790,9 @@ impl Decimal {
         // Short circuit for zero
         if self.is_zero() {
             return Decimal {
-                lo: 0,
-                mid: 0,
-                hi: 0,
+                lo:    0,
+                mid:   0,
+                hi:    0,
                 flags: flags(self.is_sign_negative(), dp),
             };
         }
@@ -932,9 +910,9 @@ impl Decimal {
         }
 
         Decimal {
-            lo: value[0],
-            mid: value[1],
-            hi: value[2],
+            lo:    value[0],
+            mid:   value[1],
+            hi:    value[2],
             flags: flags(negative, dp),
         }
     }
@@ -980,10 +958,10 @@ impl Decimal {
     pub const fn unpack(&self) -> UnpackedDecimal {
         UnpackedDecimal {
             is_negative: self.is_sign_negative(),
-            scale: self.scale(),
-            hi: self.hi,
-            lo: self.lo,
-            mid: self.mid,
+            scale:       self.scale(),
+            hi:          self.hi,
+            lo:          self.lo,
+            mid:         self.mid,
         }
     }
 
@@ -1017,12 +995,7 @@ impl Decimal {
         [self.lo, self.mid, self.hi, 0]
     }
 
-    fn base2_to_decimal(
-        bits: &mut [u32; 3],
-        exponent2: i32,
-        positive: bool,
-        is64: bool,
-    ) -> Option<Self> {
+    fn base2_to_decimal(bits: &mut [u32; 3], exponent2: i32, positive: bool, is64: bool) -> Option<Self> {
         // 2^exponent2 = (10^exponent2)/(5^exponent2)
         //             = (5^-exponent2)*(10^exponent2)
         let mut exponent5 = -exponent2;
@@ -1127,11 +1100,7 @@ impl Decimal {
             }
         } else {
             // Guaranteed to about 7 dp
-            while exponent10 < 0
-                && (bits[2] != 0
-                    || bits[1] != 0
-                    || (bits[2] == 0 && bits[1] == 0 && (bits[0] & 0xFF00_0000) != 0))
-            {
+            while exponent10 < 0 && (bits[2] != 0 || bits[1] != 0 || (bits[2] == 0 && bits[1] == 0 && (bits[0] & 0xFF00_0000) != 0)) {
                 let rem10 = div_by_u32(bits, 10);
                 exponent10 += 1;
                 if rem10 >= 5 {
@@ -1155,9 +1124,9 @@ impl Decimal {
         }
 
         Some(Decimal {
-            lo: bits[0],
-            mid: bits[1],
-            hi: bits[2],
+            lo:    bits[0],
+            mid:   bits[1],
+            hi:    bits[2],
             flags: flags(!positive, -exponent10 as u32),
         })
     }
@@ -1232,9 +1201,9 @@ impl Decimal {
             my[2] = temp[2];
         }
         Some(Decimal {
-            lo: my[0],
-            mid: my[1],
-            hi: my[2],
+            lo:    my[0],
+            mid:   my[1],
+            hi:    my[2],
             flags: flags(negative, final_scale),
         })
     }
@@ -1243,9 +1212,9 @@ impl Decimal {
     #[inline(always)]
     pub fn checked_sub(self, other: &Decimal) -> Option<Decimal> {
         let negated_other = Decimal {
-            lo: other.lo,
-            mid: other.mid,
-            hi: other.hi,
+            lo:    other.lo,
+            mid:   other.mid,
+            hi:    other.hi,
             flags: other.flags ^ SIGN_MASK,
         };
         self.checked_add(&negated_other)
@@ -1307,9 +1276,9 @@ impl Decimal {
                 final_scale = MAX_PRECISION;
             }
             return Some(Decimal {
-                lo: u64_result[0],
-                mid: u64_result[1],
-                hi: 0,
+                lo:    u64_result[0],
+                mid:   u64_result[1],
+                hi:    0,
                 flags: flags(negative, final_scale),
             });
         }
@@ -1417,9 +1386,9 @@ impl Decimal {
         }
 
         Some(Decimal {
-            lo: product[0],
-            mid: product[1],
-            hi: product[2],
+            lo:    product[0],
+            mid:   product[1],
+            hi:    product[2],
             flags: flags(negative, final_scale),
         })
     }
@@ -1456,12 +1425,7 @@ impl Decimal {
 
         loop {
             div_internal(&mut working_quotient, &mut working_remainder, &divisor);
-            underflow = add_with_scale_internal(
-                &mut quotient,
-                &mut quotient_scale,
-                &mut working_quotient,
-                &mut working_scale,
-            );
+            underflow = add_with_scale_internal(&mut quotient, &mut quotient_scale, &mut working_quotient, &mut working_scale);
 
             // Multiply the remainder by 10
             let mut overflow = 0;
@@ -1547,15 +1511,15 @@ impl Decimal {
         }
 
         DivResult::Ok(Decimal {
-            lo: quotient[0],
-            mid: quotient[1],
-            hi: quotient[2],
+            lo:    quotient[0],
+            mid:   quotient[1],
+            hi:    quotient[2],
             flags: flags(quotient_negative, final_scale),
         })
     }
 
     /// Checked remainder. Computes `self % other`, returning `None` if `other == 0.0`.
-    pub fn checked_rem(self, other: Decimal) -> Option<Decimal> {
+    pub fn checked_rem(self, other: &Decimal) -> Option<Decimal> {
         if other.is_zero() {
             return None;
         }
@@ -1569,12 +1533,7 @@ impl Decimal {
         let mut quotient_scale = initial_scale;
         let mut divisor = [other.lo, other.mid, other.hi];
         let mut divisor_scale = other.scale();
-        rescale_to_maximum_scale(
-            &mut quotient,
-            &mut quotient_scale,
-            &mut divisor,
-            &mut divisor_scale,
-        );
+        rescale_to_maximum_scale(&mut quotient, &mut quotient_scale, &mut divisor, &mut divisor_scale);
 
         // Working is the remainder + the quotient
         // We use an aligned array since we'll be using it a lot.
@@ -1601,9 +1560,9 @@ impl Decimal {
         }
 
         Some(Decimal {
-            lo: working_remainder[0],
-            mid: working_remainder[1],
-            hi: working_remainder[2],
+            lo:    working_remainder[0],
+            mid:   working_remainder[1],
+            hi:    working_remainder[2],
             flags: flags(self.is_sign_negative(), quotient_scale),
         })
     }
@@ -1632,12 +1591,7 @@ const fn flags(neg: bool, scale: u32) -> u32 {
 /// will try to reduce the accuracy of the other argument.
 /// e.g. with 1.23 and 2.345 it'll rescale the first arg to 1.230
 #[inline(always)]
-fn rescale_to_maximum_scale(
-    left: &mut [u32; 3],
-    left_scale: &mut u32,
-    right: &mut [u32; 3],
-    right_scale: &mut u32,
-) {
+fn rescale_to_maximum_scale(left: &mut [u32; 3], left_scale: &mut u32, right: &mut [u32; 3], right_scale: &mut u32) {
     if left_scale == right_scale {
         // Nothing to do
         return;
@@ -1767,10 +1721,7 @@ fn add_internal(value: &mut [u32], by: &[u32]) -> u32 {
             carry += u64::from(by[vl]);
         }
     } else {
-        panic!(
-            "Internal error: add using incompatible length arrays. {} <- {}",
-            vl, bl
-        );
+        panic!("Internal error: add using incompatible length arrays. {} <- {}", vl, bl);
     }
     carry as u32
 }
@@ -1871,12 +1822,7 @@ fn add_with_scale_internal(
     // (ultimately losing significant digits)
     if *quotient_scale != *working_scale {
         // TODO: Remove necessity for temp (without performance impact)
-        fn div_by_10_lossy(
-            target: &mut [u32],
-            temp: &mut [u32],
-            scale: &mut i32,
-            target_scale: i32,
-        ) {
+        fn div_by_10_lossy(target: &mut [u32], temp: &mut [u32], scale: &mut i32, target_scale: i32) {
             temp.copy_from_slice(target);
             // divide by 10 until target scale is reached
             while *scale > target_scale {
@@ -2237,9 +2183,9 @@ impl Zero for Decimal {
     fn zero() -> Decimal {
         Decimal {
             flags: 0,
-            hi: 0,
-            lo: 0,
-            mid: 0,
+            hi:    0,
+            lo:    0,
+            mid:   0,
         }
     }
 
@@ -2252,9 +2198,9 @@ impl One for Decimal {
     fn one() -> Decimal {
         Decimal {
             flags: 0,
-            hi: 0,
-            lo: 1,
-            mid: 0,
+            hi:    0,
+            lo:    1,
+            mid:   0,
         }
     }
 }
@@ -2476,11 +2422,7 @@ impl Num for Decimal {
             };
 
             // Round at midpoint
-            let midpoint = if radix & 0x1 == 1 {
-                radix / 2
-            } else {
-                radix + 1 / 2
-            };
+            let midpoint = if radix & 0x1 == 1 { radix / 2 } else { radix + 1 / 2 };
             if digit >= midpoint {
                 let mut index = coeff.len() - 1;
                 loop {
@@ -2559,9 +2501,9 @@ impl Num for Decimal {
         }
 
         Ok(Decimal {
-            lo: data[0],
-            mid: data[1],
-            hi: data[2],
+            lo:    data[0],
+            mid:   data[1],
+            hi:    data[2],
             flags: flags(negative, scale),
         })
     }
@@ -2615,18 +2557,18 @@ impl FromPrimitive for Decimal {
     fn from_u32(n: u32) -> Option<Decimal> {
         Some(Decimal {
             flags: 0,
-            lo: n,
-            mid: 0,
-            hi: 0,
+            lo:    n,
+            mid:   0,
+            hi:    0,
         })
     }
 
     fn from_u64(n: u64) -> Option<Decimal> {
         Some(Decimal {
             flags: 0,
-            lo: n as u32,
-            mid: (n >> 32) as u32,
-            hi: 0,
+            lo:    n as u32,
+            mid:   (n >> 32) as u32,
+            hi:    0,
         })
     }
 
@@ -2701,11 +2643,7 @@ impl FromPrimitive for Decimal {
 
         // Get the bits and exponent2
         let mut exponent2 = biased_exponent - 1023;
-        let mut bits = [
-            (mantissa & 0xFFFF_FFFF) as u32,
-            ((mantissa >> 32) & 0xFFFF_FFFF) as u32,
-            0u32,
-        ];
+        let mut bits = [(mantissa & 0xFFFF_FFFF) as u32, ((mantissa >> 32) & 0xFFFF_FFFF) as u32, 0u32];
         if biased_exponent == 0 {
             // Denormalized number - correct the exponent
             exponent2 += 1;
@@ -2855,9 +2793,9 @@ impl<'a> Neg for &'a Decimal {
     fn neg(self) -> Decimal {
         Decimal {
             flags: flags(!self.is_sign_negative(), self.scale()),
-            hi: self.hi,
-            lo: self.lo,
-            mid: self.mid,
+            hi:    self.hi,
+            lo:    self.lo,
+            mid:   self.mid,
         }
     }
 }
@@ -3037,7 +2975,7 @@ impl<'a, 'b> Rem<&'b Decimal> for &'a Decimal {
 
     #[inline]
     fn rem(self, other: &Decimal) -> Decimal {
-        match self.checked_rem(*other) {
+        match self.checked_rem(other) {
             Some(rem) => rem,
             None => panic!("Division by zero"),
         }
@@ -3143,12 +3081,7 @@ impl Ord for Decimal {
         // Rescale and compare
         let mut left_raw = [left.lo, left.mid, left.hi];
         let mut right_raw = [right.lo, right.mid, right.hi];
-        rescale_to_maximum_scale(
-            &mut left_raw,
-            &mut left_scale,
-            &mut right_raw,
-            &mut right_scale,
-        );
+        rescale_to_maximum_scale(&mut left_raw, &mut left_scale, &mut right_raw, &mut right_scale);
         cmp_internal(&left_raw, &right_raw)
     }
 }
@@ -3193,21 +3126,11 @@ mod test {
             ("1", "1.0", "1.0", "1.0"),
             ("1", "1.00000", "1.00000", "1.00000"),
             ("1", "1.0000000000", "1.0000000000", "1.0000000000"),
-            (
-                "1",
-                "1.00000000000000000000",
-                "1.00000000000000000000",
-                "1.00000000000000000000",
-            ),
+            ("1", "1.00000000000000000000", "1.00000000000000000000", "1.00000000000000000000"),
             ("1.1", "1.1", "1.1", "1.1"),
             ("1.1", "1.10000", "1.10000", "1.10000"),
             ("1.1", "1.1000000000", "1.1000000000", "1.1000000000"),
-            (
-                "1.1",
-                "1.10000000000000000000",
-                "1.10000000000000000000",
-                "1.10000000000000000000",
-            ),
+            ("1.1", "1.10000000000000000000", "1.10000000000000000000", "1.10000000000000000000"),
             (
                 "0.6386554621848739495798319328",
                 "11.815126050420168067226890757",
@@ -3261,11 +3184,7 @@ mod test {
             ("1", 5, "1.00000"),
             ("1", 10, "1.0000000000"),
             ("1", 20, "1.00000000000000000000"),
-            (
-                "0.6386554621848739495798319328",
-                27,
-                "0.638655462184873949579831933",
-            ),
+            ("0.6386554621848739495798319328", 27, "0.638655462184873949579831933"),
             (
                 "843.65000000",                  // Scale 8
                 25,                              // 25
